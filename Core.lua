@@ -1,5 +1,6 @@
 -- KwikTip: Core.lua (Event tracking, logging, commands, detection)
 local ADDON_NAME, KwikTip = ...
+local L = KwikTip.L
 
 local frame = CreateFrame("Frame", "KwikTipCoreFrame", UIParent)
 frame:RegisterEvent("PLAYER_ENTERING_WORLD")
@@ -140,7 +141,7 @@ local function FormatAffixDetails()
     if not C_ChallengeMode then return nil end
     local level, affixes = C_ChallengeMode.GetActiveKeystoneInfo()
     if not level or not affixes or #affixes == 0 then return nil end
-    local lines = { GOLD .. "+" .. level .. " Active Affixes" .. RESET }
+    local lines = { GOLD .. "+" .. level .. " " .. L["Active Affixes"] .. RESET }
     for _, id in ipairs(affixes) do
         local data = KwikTip.AFFIXES and KwikTip.AFFIXES[id]
         local info = C_ChallengeMode.GetAffixInfo(id)
@@ -411,7 +412,7 @@ function KwikTip:UpdateContent()
         if affixDetails then
             self:SetContent(GOLD .. dungeon.name .. RESET .. "\n" .. affixDetails)
         else
-            self:SetContent(GRAY .. "Waiting for relevant encounter..." .. RESET)
+            self:SetContent(GRAY .. L["Waiting for relevant encounter..."] .. RESET)
         end
     else
         self.areaActive    = false
@@ -486,13 +487,15 @@ end
 -- ============================================================
 
 -- Static demo notes — module-scoped so ShowPreview doesn't reallocate on every call.
-local DEMO_NOTES = {
-    { role = "general",   text = "Avoid the red zones; use a personal defensive on the big hit." },
-    { role = "tank",      text = "Tank swap at 3 stacks of the debuff." },
-    { role = "healer",    text = "Major healing CDs after every Cataclysm cast." },
-    { role = "dps",       text = "Kill adds before switching back to the boss." },
-    { role = "interrupt", text = "Shadowbolt — interrupt every cast, no exceptions." },
-}
+local function GetDemoNotes()
+    return {
+        { role = "general",   text = L["DEMO_NOTE_GENERAL"]   },
+        { role = "tank",      text = L["DEMO_NOTE_TANK"]      },
+        { role = "healer",    text = L["DEMO_NOTE_HEALER"]    },
+        { role = "dps",       text = L["DEMO_NOTE_DPS"]       },
+        { role = "interrupt", text = L["DEMO_NOTE_INTERRUPT"] },
+    }
+end
 
 -- Show a demo tip in the HUD with one note of every role category.
 -- Sets previewActive so UpdateContent won't override it while config is open.
@@ -500,7 +503,7 @@ local DEMO_NOTES = {
 function KwikTip:ShowPreview()
     self.previewActive = true
     self:InitHUD()
-    self:SetContent(FormatHeader("Demo Dungeon", "Example Boss") .. "\n" .. FormatNotes(DEMO_NOTES))
+    self:SetContent(FormatHeader(L["Demo Dungeon"], L["Example Boss"]) .. "\n" .. FormatNotes(GetDemoNotes()))
     self:UpdateVisibility()
 end
 
@@ -525,7 +528,7 @@ end
 -- ============================================================
 -- Slash commands
 -- ============================================================
-SLASH_KWIKTIP1 = "/kwiktip"
+SLASH_KWIKTIP1 = "/kwiktip" 
 SLASH_KWIKTIP2 = "/kwik"
 
 SlashCmdList["KWIKTIP"] = function(msg)
@@ -539,7 +542,7 @@ SlashCmdList["KWIKTIP"] = function(msg)
         local dungeon = (instanceID and KwikTip.DUNGEON_BY_INSTANCEID[instanceID])
             or (mapID and KwikTip.DUNGEON_BY_UIMAPID[mapID])
         local subzone = GetSubZoneText()
-        local dungeonName = dungeon and dungeon.name or "none"
+        local dungeonName = dungeon and dungeon.name or L["none"]
         local mapIDCount     = KwikTipDB.mapIDLog     and #KwikTipDB.mapIDLog     or 0
         local mobCount       = KwikTipDB.mobLog       and #KwikTipDB.mobLog       or 0
         local encounterCount = KwikTipDB.encounterLog and #KwikTipDB.encounterLog or 0
@@ -548,7 +551,7 @@ SlashCmdList["KWIKTIP"] = function(msg)
         local snapshotCount  = KwikTipDB.debugSnapshots and #KwikTipDB.debugSnapshots or 0
         local keyLevel, keyAffixes
         if C_ChallengeMode then keyLevel, keyAffixes = C_ChallengeMode.GetActiveKeystoneInfo() end
-        print("|cff00ff00KwikTip|r debug:")
+        print("|cff00ff00KwikTip|r " .. L["DEBUG_HEADER"])
         print(string.format("  inInstance=%s  type=%s  boss=%s  area=%s  dungeon=%s",
             tostring(inInstance), tostring(instanceType),
             tostring(KwikTip.bossActive),
@@ -590,7 +593,7 @@ SlashCmdList["KWIKTIP"] = function(msg)
     elseif cmd == "debuglog" then
         KwikTipDB.debugLog = not KwikTipDB.debugLog
         KwikTip:UpdateContent()
-        print(string.format("|cff00ff00KwikTip|r debug logging %s.", KwikTipDB.debugLog and "enabled" or "disabled"))
+        print("|cff00ff00KwikTip|r " .. (KwikTipDB.debugLog and L["debug logging enabled."] or L["debug logging disabled."]))
     elseif cmd == "preview" then
         KwikTip:TogglePreview()
     elseif cmd == "clearlog" then
@@ -601,22 +604,22 @@ SlashCmdList["KWIKTIP"] = function(msg)
         KwikTipDB.spellLog       = {}
         KwikTipDB.debugSnapshots = {}
         _loggedSpells = {}
-        print("|cff00ff00KwikTip|r mapIDLog, mobLog, encounterLog, keystoneLog, spellLog, and debugSnapshots cleared.")
+        print("|cff00ff00KwikTip|r " .. L["CLEARLOG_MSG"])
     elseif cmd == "feedback" then
-        print("|cff00ff00KwikTip|r Tips feel off? Open an issue at: https://github.com/postblink/KwikTip/issues")
+        print("|cff00ff00KwikTip|r " .. L["FEEDBACK_MSG"])
     elseif cmd == "config" or cmd == "" then
         KwikTip:ToggleConfig()
     elseif cmd == "help" then
-        print("|cff00ff00KwikTip|r commands:")
-        print("  /kwik           — open settings")
-        print("  /kwik move      — toggle move/lock mode")
-        print("  /kwik preview   — toggle role notes preview in the HUD")
-        print("  /kwik debug     — print current detection state to chat")
-        print("  /kwik debuglog  — toggle map/mob ID logging to SavedVariables")
-        print("  /kwik clearlog  — clear all debug logs from SavedVariables")
-        print("  /kwik feedback  — print the feedback/issue link")
-        print("  /kwik help      — show this command list")
+        print("|cff00ff00KwikTip|r " .. L["HELP_HEADER"])
+        print(L["HELP_CMD_OPEN"])
+        print(L["HELP_CMD_MOVE"])
+        print(L["HELP_CMD_PREVIEW"])
+        print(L["HELP_CMD_DEBUG"])
+        print(L["HELP_CMD_DEBUGLOG"])
+        print(L["HELP_CMD_CLEARLOG"])
+        print(L["HELP_CMD_FEEDBACK"])
+        print(L["HELP_CMD_HELP"])
     else
-        print("|cff00ff00KwikTip|r unknown command. Type /kwik help for a list of commands.")
+        print("|cff00ff00KwikTip|r " .. L["UNKNOWN_CMD"])
     end
 end
